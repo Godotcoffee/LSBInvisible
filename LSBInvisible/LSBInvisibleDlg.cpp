@@ -554,15 +554,12 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 	}
 
 #ifdef CONSOLE_DEBUG
-	const char *data = cstra.GetString();
-	for (int i = 0; i < usedByte; ++i) {
-		_cprintf("%c\n", data[i]);
-	}
+	_cprintf("%d", cstra.GetLength());
 #endif
 	BYTE *newImgData;
 	if ((newImgData = new BYTE[imgSize]) == NULL) {
 		CString errorMsg;
-		errorMsg.Format(_T("无法分配%d字节内存", imgSize));
+		errorMsg.Format(_T("无法分配%d字节内存"), imgSize);
 		MessageBox(errorMsg, _T("错误"), MB_OK);
 		return;
 	}
@@ -637,7 +634,7 @@ void CLSBInvisibleDlg::OnBnClickedButtonGet()
 	BYTE *msgData;
 	if ((msgData = new BYTE[imgSize + 1]) == NULL) {
 		CString errorMsg;
-		errorMsg.Format(_T("无法分配%d字节内存", imgSize + 1));
+		errorMsg.Format(_T("无法分配%d字节内存"), imgSize + 1);
 		MessageBox(errorMsg, _T("错误"), MB_OK);
 		return;
 	}
