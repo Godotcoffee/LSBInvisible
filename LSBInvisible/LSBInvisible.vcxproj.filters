@@ -36,6 +36,9 @@
     <ClInclude Include="MyBMPAlter.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="MessageHidden.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LSBInvisible.cpp">
@@ -48,6 +51,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MyBMPAlter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MessageHidden.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

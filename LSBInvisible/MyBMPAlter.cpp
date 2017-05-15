@@ -8,6 +8,7 @@
 #include <windows.h>
 
 using std::ifstream;
+using std::ofstream;
 using std::ios_base;
 using std::ostringstream;
 using std::cerr;
@@ -83,7 +84,7 @@ MyBMPAlter::MyBMPAlter(const BITMAPFILEHEADER &fileHeader, const BITMAPINFOHEADE
 		cerr << "Can't allocate memory of " << imageSize << "bytes" << endl;
 		return;
 	}
-	memcpy(this->imageData, imageData, imageSize * sizeof(RGBQUAD));
+	memcpy(this->imageData, imageData, imageSize * sizeof(BYTE));
 
 	isRead = true;
 }
@@ -240,10 +241,19 @@ int MyBMPAlter::getImageSize() const
 	return imageSize;
 }
 
-bool MyBMPAlter::saveAsFile(const char * fileName) const
+bool MyBMPAlter::saveAsFile(const char *fileName) const
 {
-	
-	return false;
+	ofstream bmpOutput(fileName, ios_base::out | ios_base::binary);
+	if (!bmpOutput) {
+		cerr << "Can't open " << fileName << endl;
+		return false;
+	}
+	bmpOutput.write((char *)&fileHeader, sizeof(fileHeader));
+	bmpOutput.write((char *)&infoHeader, sizeof(infoHeader));
+	bmpOutput.write((char *)quad, quadSize * sizeof(RGBQUAD));
+	bmpOutput.write((char *)imageData, imageSize * sizeof(BYTE));
+	bmpOutput.close();
+	return true;
 }
 
 bool MyBMPAlter::saveAsFile(const string fileName) const

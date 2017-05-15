@@ -3,13 +3,15 @@
 //
 
 #include "stdafx.h"
-#include "LSBInvisible.h"
-#include "LSBInvisibleDlg.h"
 #include "afxdialogex.h"
 
 #include <conio.h>
 #include <sstream>
 #include <algorithm>
+
+#include "LSBInvisible.h"
+#include "LSBInvisibleDlg.h"
+#include "MessageHidden.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -82,12 +84,14 @@ BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
 	ON_COMMAND(ID_32771, &CLSBInvisibleDlg::OnClickReadImage)
 	ON_WM_CTLCOLOR()
 	ON_EN_CHANGE(IDC_EDIT_CONTENT, &CLSBInvisibleDlg::OnEnChangeEditContent)
-	ON_UPDATE_COMMAND_UI(ID_32772, &CLSBInvisibleDlg::OnUpdateSaveImage)
+	ON_UPDATE_COMMAND_UI(ID_MENU_SAVE_IMAGE, &CLSBInvisibleDlg::OnUpdateSaveImage)
 	ON_WM_INITMENUPOPUP()
 	ON_BN_CLICKED(IDC_BUTTON_CHOOSE_ALL, &CLSBInvisibleDlg::OnBnClickedButtonChooseAll)
 	ON_WM_VSCROLL()
 	ON_WM_HSCROLL()
 	ON_BN_CLICKED(IDC_BUTTON_INSERT, &CLSBInvisibleDlg::OnBnClickedButtonInsert)
+	ON_COMMAND(ID_MENU_SAVE_IMAGE, &CLSBInvisibleDlg::OnMenuSaveImage)
+	ON_BN_CLICKED(IDC_BUTTON_GET, &CLSBInvisibleDlg::OnBnClickedButtonGet)
 END_MESSAGE_MAP()
 
 // 下面函数代码是拷贝的,为了让对话框模式能响应菜单弹出事件
@@ -436,6 +440,9 @@ void CLSBInvisibleDlg::OnClickReadImage()
 			btn_chooseAll.EnableWindow();
 			btn_insert.EnableWindow();
 
+			// 禁用保存
+			saveImgEnable = false;
+
 #ifdef CONSOLE_DEBUG
 			std::ostringstream os;
 			originBmp.outputInfo(os);
@@ -459,6 +466,21 @@ void CLSBInvisibleDlg::OnClickReadImage()
 
 	SetMenu(&menu_dlg);	// 返回后菜单栏会失焦，通过重新设置菜单可以恢复。PS：不清楚有什么影响
 }
+
+// 保存图片
+void CLSBInvisibleDlg::OnMenuSaveImage()
+{
+	if (!resultBmp.checkIsRead()) {
+		return;
+	}
+	CFileDialog fileDlg(false, _T("bmp"), NULL, 0, _T("位图文件(*.bmp)|*.bmp||"), this);
+	if (fileDlg.DoModal() == IDOK) {
+		CString filePathName = fileDlg.GetPathName();
+		resultBmp.saveAsFile(CT2A(filePathName));
+	}
+	SetMenu(&menu_dlg);	// 同上
+}
+
 
 // 利用消息事件来实现CStatic的颜色变换
 HBRUSH CLSBInvisibleDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
@@ -517,9 +539,44 @@ void CLSBInvisibleDlg::OnBnClickedButtonChooseAll()
 	edit_content.SetFocus();
 }
 
+// 嵌入信息
 void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 {
-	resultBmp = originBmp;
+	CString cstr;
+	edit_content.GetWindowText(cstr);
+	CStringA cstra = CT2A(cstr);		// 获取多字节模式的字符串
+	int imgSize = originBmp.getImageSize();
+	int totByte = imgSize >> 3;
+	int usedByte = cstra.GetLength();
+	if (usedByte > totByte) {
+		MessageBox(_T("超过可用最大字节数"), _T("错误"), MB_OK);
+		return;
+	}
+
+#ifdef CONSOLE_DEBUG
+	const char *data = cstra.GetString();
+	for (int i = 0; i < usedByte; ++i) {
+		_cprintf("%c\n", data[i]);
+	}
+#endif
+	BYTE *newImgData;
+	if ((newImgData = new BYTE[imgSize]) == NULL) {
+		CString errorMsg;
+		errorMsg.Format(_T("无法分配%d字节内存", imgSize));
+		MessageBox(errorMsg, _T("错误"), MB_OK);
+		return;
+	}
+	memcpy(newImgData, originBmp.getImageData(), imgSize * sizeof(BYTE));
+
+	// 嵌入
+	MessageHidden::hiddenMessageInLSB(newImgData, imgSize, (BYTE *) cstra.GetString(), cstra.GetLength());
+
+	resultBmp = MyBMPAlter(
+		originBmp.getFileHeader(), originBmp.getInfoHeader(), 
+		originBmp.getQuad(), originBmp.getQuadSize(), 
+		newImgData, imgSize);
+	delete[] newImgData;		// 释放
+
 	transBmp(resultCBitmap, resultBmp, *GetWindowDC());
 	int width = resultBmp.getInfoHeader().biWidth;
 	int height = resultBmp.getInfoHeader().biHeight;
@@ -563,8 +620,32 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 
 	resultX = resultY = 0;
 
+	saveImgEnable = true;
+
 	InvalidateRect(&resultRect);
 	UpdateWindow();
+}
+
+
+// 获得信息
+void CLSBInvisibleDlg::OnBnClickedButtonGet()
+{
+	if (!originBmp.checkIsRead()) {
+		return;
+	}
+	int imgSize = originBmp.getImageSize();
+	BYTE *msgData;
+	if ((msgData = new BYTE[imgSize + 1]) == NULL) {
+		CString errorMsg;
+		errorMsg.Format(_T("无法分配%d字节内存", imgSize + 1));
+		MessageBox(errorMsg, _T("错误"), MB_OK);
+		return;
+	}
+	MessageHidden::getMessageFromLSB(msgData, imgSize + 1, originBmp.getImageData(), imgSize);
+	CString msg(msgData);
+	delete[] msgData;	// 释放内存
+
+	MessageBox(msg, _T("信息"), MB_OK);
 }
 
 

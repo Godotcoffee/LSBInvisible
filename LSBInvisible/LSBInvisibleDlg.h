@@ -89,4 +89,6 @@ public:
 	CScrollBar hsb_result;
 	CButton btn_insert;
 	afx_msg void OnBnClickedButtonInsert();
+	afx_msg void OnMenuSaveImage();
+	afx_msg void OnBnClickedButtonGet();
 };
