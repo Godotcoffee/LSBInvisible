@@ -75,6 +75,8 @@ void CLSBInvisibleDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_SCROLLBAR_V_RESULT, vsb_result);
 	DDX_Control(pDX, IDC_SCROLLBAR_H_RESULT, hsb_result);
 	DDX_Control(pDX, IDC_BUTTON_INSERT, btn_insert);
+	DDX_Control(pDX, IDC_BUTTON_GET, btn_getMsg);
+	DDX_Control(pDX, IDC_EDIT_MESSAGE, edit_messageShow);
 }
 
 BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
@@ -435,10 +437,12 @@ void CLSBInvisibleDlg::OnClickReadImage()
 			vsb_origin.SetScrollInfo(&vsi);
 			hsb_origin.SetScrollInfo(&hsi);
 
-			// 启用嵌入信息的控件
+			// 初始化控件
 			edit_content.EnableWindow();
 			btn_chooseAll.EnableWindow();
 			btn_insert.EnableWindow();
+			btn_getMsg.EnableWindow();
+			edit_messageShow.SetWindowText(_T(""));
 
 			// 禁用保存
 			saveImgEnable = false;
@@ -642,7 +646,7 @@ void CLSBInvisibleDlg::OnBnClickedButtonGet()
 	CString msg(msgData);
 	delete[] msgData;	// 释放内存
 
-	MessageBox(msg, _T("信息"), MB_OK);
+	edit_messageShow.SetWindowText(msg);
 }
 
 

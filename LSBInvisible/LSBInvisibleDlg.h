@@ -91,4 +91,6 @@ public:
 	afx_msg void OnBnClickedButtonInsert();
 	afx_msg void OnMenuSaveImage();
 	afx_msg void OnBnClickedButtonGet();
+	CButton btn_getMsg;
+	CEdit edit_messageShow;
 };
