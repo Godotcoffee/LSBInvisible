@@ -89,21 +89,29 @@ MyBMPAlter::MyBMPAlter(const BITMAPFILEHEADER &fileHeader, const BITMAPINFOHEADE
 	isRead = true;
 }
 
-MyBMPAlter::MyBMPAlter(const MyBMPAlter &bmp) noexcept : quad(NULL), imageData(NULL)
+MyBMPAlter::MyBMPAlter(const MyBMPAlter &bmp) noexcept : isRead(false), quad(NULL), imageData(NULL)
 {
-	isRead = bmp.isRead;
 	fileHeader = bmp.fileHeader;
 	infoHeader = bmp.infoHeader;
 	quadSize = bmp.quadSize;
 	if (quadSize > 0) {
-		quad = new RGBQUAD[quadSize];
-		memcpy(quad, bmp.quad, quadSize * sizeof(RGBQUAD));
+		if ((quad = new RGBQUAD[quadSize]) != NULL) {
+			memcpy(quad, bmp.quad, quadSize * sizeof(RGBQUAD));
+		} else {
+			cerr << "Can't allocate memory of " << quadSize << "bytes" << endl;
+			return;
+		}
 	}
 	imageSize = bmp.imageSize;
 	if (imageSize > 0) {
-		imageData = new BYTE[imageSize];
-		memcpy(imageData, bmp.imageData, imageSize * sizeof(BYTE));
+		if ((imageData = new BYTE[imageSize]) != NULL) {
+			memcpy(imageData, bmp.imageData, imageSize * sizeof(BYTE));
+		} else {
+			cerr << "Can't allocate memory of " << imageSize << "bytes" << endl;
+			return;
+		}
 	}
+	isRead = bmp.isRead;
 }
 
 MyBMPAlter::MyBMPAlter(MyBMPAlter &&bmp) noexcept
@@ -127,19 +135,29 @@ MyBMPAlter &MyBMPAlter::operator=(const MyBMPAlter &bmp) noexcept
 	// 先判断是否是同一个地址的对象
 	if (this != &bmp) {
 		this->~MyBMPAlter();
-		isRead = bmp.isRead;
+		isRead = false;
 		fileHeader = bmp.fileHeader;
 		infoHeader = bmp.infoHeader;
 		quadSize = bmp.quadSize;
 		if (quadSize > 0) {
-			quad = new RGBQUAD[quadSize];
-			memcpy(quad, bmp.quad, quadSize * sizeof(RGBQUAD));
+			if ((quad = new RGBQUAD[quadSize]) != NULL) {
+				memcpy(quad, bmp.quad, quadSize * sizeof(RGBQUAD));
+			} else {
+				cerr << "Can't allocate memory of " << quadSize << "bytes" << endl;
+				return *this;
+			}
 		}
 		imageSize = bmp.imageSize;
 		if (imageSize > 0) {
-			imageData = new BYTE[imageSize];
-			memcpy(imageData, bmp.imageData, imageSize * sizeof(BYTE));
+			if ((imageData = new BYTE[imageSize]) != NULL) {
+				memcpy(imageData, bmp.imageData, imageSize * sizeof(BYTE));
+			} else {
+				cerr << "Can't allocate memory of " << imageSize << "bytes" << endl;
+				return *this;
+			}
 		}
+
+		isRead = bmp.isRead;
 	}
 	return *this;
 }

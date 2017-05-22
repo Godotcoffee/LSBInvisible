@@ -50,6 +50,10 @@ private:
 	void transBmp(CBitmap &cbitmap, const MyBMPAlter &myBmp, CDC &pDC);
 	void paintImage(CDC &dc, CRect rect, CBitmap &cbitmap, int x, int y);
 
+	// 下面函数用于\r\n与\n的相互转换
+	CString transCRLFToLF(const CString &cstr);
+	CString transLFToCRLF(const CString &cstr);
+
 	COLORREF usedByteClr;
 	bool saveImgEnable;
 
@@ -95,4 +99,5 @@ public:
 	CEdit edit_messageShow;
 	CButton btn_clipboard;
 	afx_msg void OnBnClickedButtonClipboard();
+	afx_msg void OnMenuExit();
 };

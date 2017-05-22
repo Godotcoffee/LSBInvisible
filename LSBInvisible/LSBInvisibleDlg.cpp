@@ -84,7 +84,7 @@ BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_COMMAND(ID_32771, &CLSBInvisibleDlg::OnClickReadImage)
+	ON_COMMAND(ID_MENU_READ_IMAGE, &CLSBInvisibleDlg::OnClickReadImage)
 	ON_WM_CTLCOLOR()
 	ON_EN_CHANGE(IDC_EDIT_CONTENT, &CLSBInvisibleDlg::OnEnChangeEditContent)
 	ON_UPDATE_COMMAND_UI(ID_MENU_SAVE_IMAGE, &CLSBInvisibleDlg::OnUpdateSaveImage)
@@ -96,6 +96,7 @@ BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
 	ON_COMMAND(ID_MENU_SAVE_IMAGE, &CLSBInvisibleDlg::OnMenuSaveImage)
 	ON_BN_CLICKED(IDC_BUTTON_GET, &CLSBInvisibleDlg::OnBnClickedButtonGet)
 	ON_BN_CLICKED(IDC_BUTTON_CLIPBOARD, &CLSBInvisibleDlg::OnBnClickedButtonClipboard)
+	ON_COMMAND(ID_MENU_EXIT, &CLSBInvisibleDlg::OnMenuExit)
 END_MESSAGE_MAP()
 
 // 下面函数代码是拷贝的,为了让对话框模式能响应菜单弹出事件
@@ -262,9 +263,10 @@ void CLSBInvisibleDlg::transBmp(CBitmap &cbitmap, const MyBMPAlter &myBmp, CDC &
 		}
 	}
 	dcMem.SelectObject(oldBitmap);
-	dcMem.DeleteDC();
+	//dcMem.DeleteDC();
 }
 
+// 往dc上的rect区域绘制cbitmap上的以(x, y)为左上角的区域
 void CLSBInvisibleDlg::paintImage(CDC &dc, CRect rect, CBitmap &cbitmap, int x, int y)
 {
 	CDC dcMem;
@@ -275,7 +277,50 @@ void CLSBInvisibleDlg::paintImage(CDC &dc, CRect rect, CBitmap &cbitmap, int x, 
 	dc.BitBlt(rect.left, rect.top, rect.Width(), rect.Height(), &dcMem, x, y, SRCCOPY);
 
 	dcMem.SelectObject(oldBitmap);
-	dcMem.DeleteDC();
+	//dcMem.DeleteDC();
+}
+
+CString CLSBInvisibleDlg::transCRLFToLF(const CString &cstr)
+{
+	CString res;
+	for (int i = 0; i < cstr.GetLength(); ++i) {
+		TCHAR ch1 = cstr.GetAt(i);
+		TCHAR ch2 = cstr.GetAt(i + 1);
+		
+		if (ch1 == '\r' && ch2 == '\n') {
+			ch1 = '\n';
+			++i;
+		}
+
+		res.AppendChar(ch1);
+	}
+
+	return res;
+}
+
+CString CLSBInvisibleDlg::transLFToCRLF(const CString &cstr)
+{
+	CString res;
+	// 处理第一个字符
+	if (cstr.GetLength() > 0) {
+		int ch = cstr.GetAt(0);
+		if (ch == '\n') {
+			res.AppendChar('\r');
+		}
+		res.AppendChar(ch);
+	}
+	// 处理剩下的字符
+	for (int i = 1; i < cstr.GetLength(); ++i) {
+		TCHAR ch1 = cstr.GetAt(i - 1);
+		TCHAR ch2 = cstr.GetAt(i);
+
+		if (ch2 == '\n' && ch1 != '\r') {
+			res.AppendChar('\r');
+		}
+		res.AppendChar(ch2);
+	}
+
+	return res;
 }
 
 // CLSBInvisibleDlg 消息处理程序
@@ -378,10 +423,12 @@ HCURSOR CLSBInvisibleDlg::OnQueryDragIcon()
 }
 
 
-// 点击打开图片按钮事件
+// 点击读取图片按钮事件
 void CLSBInvisibleDlg::OnClickReadImage()
 {
-	CFileDialog fileDlg(true, _T("txt"), NULL, 0, _T("位图文件(*.bmp)|*.bmp||"), this);
+	CFileDialog fileDlg(true, _T("txt"), NULL, OFN_HIDEREADONLY, _T("位图文件(*.bmp)|*.bmp||"), this);
+	fileDlg.m_ofn.lpstrTitle = _T("读取图片");
+
 	if (fileDlg.DoModal() == IDOK) {
 		CString filePath = fileDlg.GetPathName();
 		MyBMPAlter newBMP((CT2A(filePath)));
@@ -395,8 +442,12 @@ void CLSBInvisibleDlg::OnClickReadImage()
 			}
 			originBmp = newBMP;
 			resultBmp = MyBMPAlter();
+
 			// 将MyBMPAlter转换成内存中的CBitmap保存
-			transBmp(originCBitmap, originBmp, *GetWindowDC());
+			CDC *pDC = GetDC();
+			transBmp(originCBitmap, originBmp, *pDC);
+			ReleaseDC(pDC);
+
 			// 获得图像的长宽
 			int width = originBmp.getInfoHeader().biWidth;
 			int height = originBmp.getInfoHeader().biHeight;
@@ -485,7 +536,9 @@ void CLSBInvisibleDlg::OnMenuSaveImage()
 	if (!resultBmp.checkIsRead()) {
 		return;
 	}
-	CFileDialog fileDlg(false, _T("bmp"), NULL, 0, _T("位图文件(*.bmp)|*.bmp||"), this);
+	CFileDialog fileDlg(false, _T("bmp"), NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("位图文件(*.bmp)|*.bmp||"), this);
+	fileDlg.m_ofn.lpstrTitle = _T("保存图片");
+
 	if (fileDlg.DoModal() == IDOK) {
 		CString filePathName = fileDlg.GetPathName();
 		resultBmp.saveAsFile(CT2A(filePathName));
@@ -523,7 +576,7 @@ void CLSBInvisibleDlg::OnEnChangeEditContent()
 	// 先转换成多字节模式,以正确地处理中文字符
 	CString content;
 	edit_content.GetWindowTextW(content);
-	int length = ((CStringA)CT2A(content)).GetLength();
+	int length = ((CStringA)CT2A(transCRLFToLF(content))).GetLength();
 
 	// 如果使用的字节数超过总可使用的字节数,则显示为红色
 	if (length > originBmp.getImageSize() >> 3) {
@@ -556,7 +609,8 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 {
 	CString cstr;
 	edit_content.GetWindowText(cstr);
-	CStringA cstra = CT2A(cstr);		// 获取多字节模式的字符串
+	// 获取多字节模式的字符串并去掉\r\n中的\r
+	CStringA cstra = CT2A(transCRLFToLF(cstr));
 	int imgSize = originBmp.getImageSize();
 	int totByte = imgSize >> 3;
 	int usedByte = cstra.GetLength();
@@ -570,6 +624,7 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 	for (int i = 0; i < cstra.GetLength(); ++i) {
 		_cprintf("%d ", cstra.GetAt(i));
 	}
+	_cprintf("\n");
 #endif
 	BYTE *newImgData;
 	if ((newImgData = new BYTE[imgSize]) == NULL) {
@@ -587,9 +642,11 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 		originBmp.getFileHeader(), originBmp.getInfoHeader(), 
 		originBmp.getQuad(), originBmp.getQuadSize(), 
 		newImgData, imgSize);
-	delete[] newImgData;		// 释放
+	delete[] newImgData;		// 释放内存
 
-	transBmp(resultCBitmap, resultBmp, *GetWindowDC());
+	CDC *pDC = GetDC();
+	transBmp(resultCBitmap, resultBmp, *pDC);
+	ReleaseDC(pDC);
 	int width = resultBmp.getInfoHeader().biWidth;
 	int height = resultBmp.getInfoHeader().biHeight;
 
@@ -655,7 +712,7 @@ void CLSBInvisibleDlg::OnBnClickedButtonGet()
 		return;
 	}
 	MessageHidden::getMessageFromLSB(msgData, msgSize, originBmp.getImageData(), imgSize);
-	CString msg(msgData);
+	CString msg = transLFToCRLF(CString(msgData));
 	delete[] msgData;	// 释放内存
 
 	edit_messageShow.SetWindowText(msg);
@@ -773,4 +830,10 @@ void CLSBInvisibleDlg::OnBnClickedButtonClipboard()
 	} else {
 		MessageBox(_T("复制失败"), _T("错误"), MB_OK);
 	}
+}
+
+// 退出
+void CLSBInvisibleDlg::OnMenuExit()
+{
+	DestroyWindow();
 }
