@@ -77,6 +77,7 @@ void CLSBInvisibleDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_BUTTON_INSERT, btn_insert);
 	DDX_Control(pDX, IDC_BUTTON_GET, btn_getMsg);
 	DDX_Control(pDX, IDC_EDIT_MESSAGE, edit_messageShow);
+	DDX_Control(pDX, IDC_BUTTON_CLIPBOARD, btn_clipboard);
 }
 
 BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
@@ -94,6 +95,7 @@ BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_INSERT, &CLSBInvisibleDlg::OnBnClickedButtonInsert)
 	ON_COMMAND(ID_MENU_SAVE_IMAGE, &CLSBInvisibleDlg::OnMenuSaveImage)
 	ON_BN_CLICKED(IDC_BUTTON_GET, &CLSBInvisibleDlg::OnBnClickedButtonGet)
+	ON_BN_CLICKED(IDC_BUTTON_CLIPBOARD, &CLSBInvisibleDlg::OnBnClickedButtonClipboard)
 END_MESSAGE_MAP()
 
 // 下面函数代码是拷贝的,为了让对话框模式能响应菜单弹出事件
@@ -386,6 +388,11 @@ void CLSBInvisibleDlg::OnClickReadImage()
 		if (!newBMP) {
 			MessageBox(_T("打开图片失败"), _T("错误"), MB_OK);
 		} else {
+			int bitPerPixel = newBMP.getInfoHeader().biBitCount;
+			if (bitPerPixel != 8 && bitPerPixel != 24) {
+				MessageBox(_T("只支持256色和24位位图图象"), _T("错误"), MB_OK);
+				return;
+			}
 			originBmp = newBMP;
 			resultBmp = MyBMPAlter();
 			// 将MyBMPAlter转换成内存中的CBitmap保存
@@ -444,13 +451,14 @@ void CLSBInvisibleDlg::OnClickReadImage()
 			btn_getMsg.EnableWindow();
 			edit_messageShow.SetWindowText(_T(""));
 
-			// 禁用保存
+			// 禁用控件
 			saveImgEnable = false;
+			btn_clipboard.EnableWindow(false);
 
 #ifdef CONSOLE_DEBUG
 			std::ostringstream os;
 			originBmp.outputInfo(os);
-			_cprintf("%s\n%s\n", (const char *) CT2A(filePath), os.str().c_str());
+			_cwprintf(_T("%s\n%s\n"), filePath, (const TCHAR *)CA2T(os.str().c_str()));
 #endif
 
 			// 显示能存储的字节数(位数/8)
@@ -570,7 +578,7 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 	memcpy(newImgData, originBmp.getImageData(), imgSize * sizeof(BYTE));
 
 	// 嵌入
-	MessageHidden::hiddenMessageInLSB(newImgData, imgSize, (BYTE *) cstra.GetString(), cstra.GetLength());
+	MessageHidden::hiddenMessageInLSB(newImgData, imgSize, cstra, cstra.GetLength());
 
 	resultBmp = MyBMPAlter(
 		originBmp.getFileHeader(), originBmp.getInfoHeader(), 
@@ -635,18 +643,20 @@ void CLSBInvisibleDlg::OnBnClickedButtonGet()
 		return;
 	}
 	int imgSize = originBmp.getImageSize();
-	BYTE *msgData;
-	if ((msgData = new BYTE[imgSize + 1]) == NULL) {
+	int msgSize = (imgSize >> 3) + 1;
+	char *msgData;
+	if ((msgData = new char[msgSize]) == NULL) {
 		CString errorMsg;
-		errorMsg.Format(_T("无法分配%d字节内存"), imgSize + 1);
+		errorMsg.Format(_T("无法分配%d字节内存"), msgSize);
 		MessageBox(errorMsg, _T("错误"), MB_OK);
 		return;
 	}
-	MessageHidden::getMessageFromLSB(msgData, imgSize + 1, originBmp.getImageData(), imgSize);
+	MessageHidden::getMessageFromLSB(msgData, msgSize, originBmp.getImageData(), imgSize);
 	CString msg(msgData);
 	delete[] msgData;	// 释放内存
 
 	edit_messageShow.SetWindowText(msg);
+	btn_clipboard.EnableWindow();
 }
 
 
@@ -735,4 +745,29 @@ void CLSBInvisibleDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar
 	}
 
 	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
+}
+
+// 复制到剪切板
+void CLSBInvisibleDlg::OnBnClickedButtonClipboard()
+{
+	if (OpenClipboard()) {
+		EmptyClipboard();
+		CString cstr;
+		edit_messageShow.GetWindowText(cstr);
+		// 转换成Unicode
+		CStringW content(cstr);
+		HGLOBAL hClip = GlobalAlloc(GMEM_MOVEABLE, sizeof(WCHAR) * (content.GetLength() + 1));
+		if (hClip == NULL) {
+			MessageBox(_T("复制失败"), _T("错误"), MB_OK);
+			return;
+		}
+		WCHAR *pBuf = (WCHAR *)GlobalLock(hClip);
+		StrCpyW(pBuf, content);
+		GlobalUnlock(hClip);
+		SetClipboardData(CF_UNICODETEXT, hClip);
+		CloseClipboard();
+		MessageBox(_T("复制成功^_^"), _T("提示"), MB_OK);
+	} else {
+		MessageBox(_T("复制失败"), _T("错误"), MB_OK);
+	}
 }

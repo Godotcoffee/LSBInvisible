@@ -93,4 +93,6 @@ public:
 	afx_msg void OnBnClickedButtonGet();
 	CButton btn_getMsg;
 	CEdit edit_messageShow;
+	CButton btn_clipboard;
+	afx_msg void OnBnClickedButtonClipboard();
 };

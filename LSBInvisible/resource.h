@@ -19,8 +19,9 @@
 #define IDC_BUTTON1                     1010
 #define IDC_BUTTON_INSERT               1010
 #define IDC_BUTTON_GET                  1011
-#define IDC_EDIT1                       1012
 #define IDC_EDIT_MESSAGE                1012
+#define IDC_BUTTON2                     1013
+#define IDC_BUTTON_CLIPBOARD            1013
 #define ID_32771                        32771
 #define ID_32772                        32772
 #define ID_32773                        32773
@@ -32,7 +33,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32775
-#define _APS_NEXT_CONTROL_VALUE         1013
+#define _APS_NEXT_CONTROL_VALUE         1014
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
