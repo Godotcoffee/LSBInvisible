@@ -566,7 +566,10 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 	}
 
 #ifdef CONSOLE_DEBUG
-	_cprintf("%d", cstra.GetLength());
+	_cprintf("%d\n", cstra.GetLength());
+	for (int i = 0; i < cstra.GetLength(); ++i) {
+		_cprintf("%d ", cstra.GetAt(i));
+	}
 #endif
 	BYTE *newImgData;
 	if ((newImgData = new BYTE[imgSize]) == NULL) {
