@@ -231,12 +231,12 @@ void CLSBInvisibleDlg::transBmp(CBitmap &cbitmap, const MyBMPAlter &myBmp, CDC &
 
 	for (int i = 0; i < height; ++i) {
 		for (int j = 0; j < width; ++j) {
-			if (bitPerPixel <= 8) {
+			if (bitPerPixel == 8 || bitPerPixel == 4 || bitPerPixel == 1) {
 				int bIdx = j * bitPerPixel / 8;
 				int bOffset = j * bitPerPixel % 8;
 				int bPos = i * extRowLen + bIdx;
 				if (bPos < imgSize) {
-					int quadIdx = (imgData[bPos] >> bOffset) & ((1 << bitPerPixel) - 1);
+					int quadIdx = (imgData[bPos] >> (8 - bitPerPixel - bOffset)) & ((1 << bitPerPixel) - 1);
 					if (quadIdx >= 0 && quadIdx < quadSize) {
 						RGBQUAD q = quad[quadIdx];
 						if (reversed) {
@@ -438,7 +438,7 @@ void CLSBInvisibleDlg::OnClickReadImage()
 			int bitPerPixel = newBMP.getInfoHeader().biBitCount;
 			if (bitPerPixel != 8 && bitPerPixel != 24) {
 				MessageBox(_T("只支持256色和24位位图图象"), _T("错误"), MB_OK);
-				return;
+				//return;
 			}
 			originBmp = newBMP;
 			resultBmp = MyBMPAlter();
