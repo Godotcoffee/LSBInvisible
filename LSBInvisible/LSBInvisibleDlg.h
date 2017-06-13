@@ -102,4 +102,5 @@ public:
 	CButton btn_clipboard;
 	afx_msg void OnBnClickedButtonClipboard();
 	afx_msg void OnMenuExit();
+	afx_msg void OnMenuGaussNoise();
 };

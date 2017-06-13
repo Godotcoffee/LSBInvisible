@@ -186,6 +186,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GaussNoiseDlg.h" />
     <ClInclude Include="LSBInvisible.h" />
     <ClInclude Include="LSBInvisibleDlg.h" />
     <ClInclude Include="MessageHidden.h" />
@@ -195,6 +196,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="GaussNoiseDlg.cpp" />
     <ClCompile Include="LSBInvisible.cpp" />
     <ClCompile Include="LSBInvisibleDlg.cpp" />
     <ClCompile Include="MessageHidden.cpp" />

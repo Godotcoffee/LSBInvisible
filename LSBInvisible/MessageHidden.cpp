@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "MessageHidden.h"
 
-
 MessageHidden::MessageHidden()
 {
 }
@@ -37,7 +36,7 @@ BYTE *MessageHidden::hiddenMessageInLSB(BYTE *data, int dataSize, const char *me
 	return data;
 }
 
-char * MessageHidden::getMessageFromLSB(char *message, int msgSize, const BYTE *data, int dataSize)
+char *MessageHidden::getMessageFromLSB(char *message, int msgSize, const BYTE *data, int dataSize)
 {
 	const int BYTE_BIT_COUNT = 8;
 	int hiddenByte = dataSize >> 3;
@@ -59,4 +58,23 @@ char * MessageHidden::getMessageFromLSB(char *message, int msgSize, const BYTE *
 		message[msgSize - 1] = '\0';
 	}
 	return message;
+}
+
+double MessageHidden::gaussDistribution()
+{
+	static const double PI = 6 * asin(0.5);
+	static const int ACCURATE = RAND_MAX;
+	double randNum1 = rand() % ACCURATE * 1.0 / ACCURATE;
+	double randNum2 = rand() % ACCURATE * 1.0 / ACCURATE;
+	return sqrt(-2.0 * log(randNum1)) * sin(PI * 2 * randNum2);
+}
+
+void MessageHidden::addGaussNoise(BYTE *data, int dataSize, double mu, double sigmaSquare)
+{
+	double sigma = sqrt(sigmaSquare);
+	for (int i = 0; i < dataSize; ++i) {
+		int val = data[i];
+		val += gaussDistribution() * sigma + mu;
+		data[i] = (BYTE) max(0, min(BYTE_MAX, val));
+	}
 }

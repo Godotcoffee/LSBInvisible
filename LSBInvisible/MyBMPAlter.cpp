@@ -24,7 +24,7 @@ MyBMPAlter::MyBMPAlter()
 MyBMPAlter::MyBMPAlter(const char *fileName)
 	: isRead(false), quad(NULL), quadSize(0), imageData(NULL), imageSize(0)
 {
-	ifstream bmpInput = ifstream(fileName, ios_base::in | ios_base::binary);
+	ifstream bmpInput(fileName, ios_base::in | ios_base::binary);
 	if (!bmpInput) {
 		// ´ò¿ªÊ§°Ü
 		cerr << "Can't open " << fileName << endl;

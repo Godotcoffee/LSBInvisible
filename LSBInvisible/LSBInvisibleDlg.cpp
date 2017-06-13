@@ -8,10 +8,12 @@
 #include <conio.h>
 #include <sstream>
 #include <algorithm>
+#include <fstream>
 
 #include "LSBInvisible.h"
 #include "LSBInvisibleDlg.h"
 #include "MessageHidden.h"
+#include "GaussNoiseDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -97,6 +99,7 @@ BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_GET, &CLSBInvisibleDlg::OnBnClickedButtonGet)
 	ON_BN_CLICKED(IDC_BUTTON_CLIPBOARD, &CLSBInvisibleDlg::OnBnClickedButtonClipboard)
 	ON_COMMAND(ID_MENU_EXIT, &CLSBInvisibleDlg::OnMenuExit)
+	ON_COMMAND(ID_MENU_GAUSS_NOISE, &CLSBInvisibleDlg::OnMenuGaussNoise)
 END_MESSAGE_MAP()
 
 // 下面函数代码是拷贝的,为了让对话框模式能响应菜单弹出事件
@@ -184,6 +187,7 @@ void CLSBInvisibleDlg::OnInitMenuPopup(CMenu* pPopupMenu, UINT nIndex, BOOL bSys
 // 初始化
 void CLSBInvisibleDlg::init()
 {
+	srand(time(NULL));
 	saveImgEnable = false;
 	usedByteClr = RGB(0, 0, 0);
 
@@ -206,6 +210,13 @@ void CLSBInvisibleDlg::init()
 
 	resultRect = maxResultRect = CRect(hsbResultRect.left, vsbResultRect.top, vsbResultRect.left, hsbResultRect.top);
 	resultX = resultY = 0;
+
+	const int sample = 1000;
+	std::ofstream out("./test.txt");
+	for (int i = 0; i < sample; ++i) {
+		out << MessageHidden::gaussDistribution() << std::endl;
+	}
+	out.close();
 }
 
 void CLSBInvisibleDlg::initOrigin(const MyBMPAlter &bmp)
@@ -851,4 +862,37 @@ void CLSBInvisibleDlg::OnBnClickedButtonClipboard()
 void CLSBInvisibleDlg::OnMenuExit()
 {
 	DestroyWindow();
+}
+
+
+void CLSBInvisibleDlg::OnMenuGaussNoise()
+{
+	if (!originBmp.checkIsRead()) {
+		return;
+	}
+
+	GaussNoiseDlg dlg;
+	if (dlg.DoModal() != IDOK) {
+		return;
+	}
+
+	int imgSize = originBmp.getImageSize();
+	BYTE *imgData;
+
+	if ((imgData = new BYTE[imgSize]) == NULL) {
+		CString errorMsg;
+		errorMsg.Format(_T("无法分配%d字节内存"), imgSize);
+		MessageBox(errorMsg, _T("错误"), MB_OK);
+		return;
+	}
+	memcpy(imgData, originBmp.getImageData(), imgSize * sizeof(BYTE));
+	MessageHidden::addGaussNoise(imgData, imgSize, dlg.mu, dlg.sigmaSquare);
+
+	resultBmp = MyBMPAlter(
+		originBmp.getFileHeader(), originBmp.getInfoHeader(),
+		originBmp.getQuad(), originBmp.getQuadSize(),
+		imgData, imgSize);
+	delete []imgData;
+
+	initResult(resultBmp);
 }
