@@ -47,6 +47,8 @@ private:
 	const int SCROLLBAR_H_PAGE = 50;	// 水平滚动条页的长度
 
 	void init();
+	void initOrigin(const MyBMPAlter &bmp);
+	void initResult(const MyBMPAlter &bmp);
 	void transBmp(CBitmap &cbitmap, const MyBMPAlter &myBmp, CDC &pDC);
 	void paintImage(CDC &dc, CRect rect, CBitmap &cbitmap, int x, int y);
 

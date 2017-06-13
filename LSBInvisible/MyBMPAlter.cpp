@@ -34,37 +34,41 @@ MyBMPAlter::MyBMPAlter(const char *fileName)
 	bmpInput.read((char *)&fileHeader, sizeof(fileHeader));
 	// 读取信息头
 	bmpInput.read((char *)&infoHeader, sizeof(infoHeader));
-	if (infoHeader.biBitCount < 24) {
-		// 24位以下需要读取调色板
-		// 调色板大小
-		int totByte = 1 << infoHeader.biBitCount;
-		quad = new RGBQUAD[totByte];
-		if (quad == NULL) {
+	if (fileHeader.bfType == 0x4D42) {
+		if (infoHeader.biBitCount < 24) {
+			// 24位以下需要读取调色板
+			// 调色板大小
+			int totByte = 1 << infoHeader.biBitCount;
+			quad = new RGBQUAD[totByte];
+			if (quad == NULL) {
+				bmpInput.close();
+				cerr << "Can't allocate memory of " << totByte << "bytes" << endl;
+				return;
+			}
+			bmpInput.read((char *)quad, totByte * sizeof(RGBQUAD));
+			quadSize = totByte;
+		}
+		// 每行原始需要的位数
+		int bitPerRow = infoHeader.biBitCount * infoHeader.biWidth;
+		// 进行4字节（32位）对齐
+		// bytePerRow = ((bitPerRow + 31) / 32 * 32) / 8
+		int extBytePerRow = (bitPerRow + 31) >> 5 << 2;
+		// 高度有可能为负
+		int totByte = extBytePerRow * abs(infoHeader.biHeight);
+		imageData = new BYTE[totByte];
+		if (imageData == NULL) {
 			bmpInput.close();
 			cerr << "Can't allocate memory of " << totByte << "bytes" << endl;
 			return;
 		}
-		bmpInput.read((char *)quad, totByte * sizeof(RGBQUAD));
-		quadSize = totByte;
+		bmpInput.read((char *)imageData, totByte * sizeof(BYTE));
+		imageSize = totByte;
+		isRead = true;
+	} else {
+		cerr << "Can't read type of " << fileHeader.bfType << endl;
 	}
-	// 每行原始需要的位数
-	int bitPerRow = infoHeader.biBitCount * infoHeader.biWidth;
-	// 进行4字节（32位）对齐
-	// bytePerRow = ((bitPerRow + 31) / 32 * 32) / 8
-	int extBytePerRow = (bitPerRow + 31) >> 5 << 2;
-	// 高度有可能为负
-	int totByte = extBytePerRow * abs(infoHeader.biHeight);
-	imageData = new BYTE[totByte];
-	if (imageData == NULL) {
-		bmpInput.close();
-		cerr << "Can't allocate memory of " << totByte << "bytes" << endl;
-		return;
-	}
-	bmpInput.read((char *)imageData, totByte * sizeof(BYTE));
-	imageSize = totByte;
 
 	bmpInput.close();
-	isRead = true;
 }
 
 MyBMPAlter::MyBMPAlter(const string fileName) : MyBMPAlter(fileName.c_str())

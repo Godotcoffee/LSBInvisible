@@ -208,6 +208,139 @@ void CLSBInvisibleDlg::init()
 	resultX = resultY = 0;
 }
 
+void CLSBInvisibleDlg::initOrigin(const MyBMPAlter &bmp)
+{
+	// 将MyBMPAlter转换成内存中的CBitmap保存
+	CDC *pDC = GetDC();
+	transBmp(originCBitmap, bmp, *pDC);
+	ReleaseDC(pDC);
+
+	// 获得图像的长宽
+	int width = bmp.getInfoHeader().biWidth;
+	int height = bmp.getInfoHeader().biHeight;
+
+	// 计算原图像显示的范围，maxOriginRect为能显示的最大范围
+	originRect.right = min(maxOriginRect.left + width, maxOriginRect.right);
+	originRect.bottom = min(maxOriginRect.top + height, maxOriginRect.bottom);
+
+	// 计算滚动条的位置
+	vsbOriginRect.OffsetRect(originRect.right - vsbOriginRect.left, 0);
+	vsbOriginRect.top = originRect.top;
+	vsbOriginRect.bottom = originRect.bottom;
+	hsbOriginRect.OffsetRect(0, originRect.bottom - hsbOriginRect.top);
+	hsbOriginRect.left = originRect.left;
+	hsbOriginRect.right = originRect.right;
+
+	// 移动滚动条
+	vsb_origin.MoveWindow(&vsbOriginRect);
+	hsb_origin.MoveWindow(&hsbOriginRect);
+
+	// 显示滚动条
+	vsb_origin.ShowWindow(TRUE);
+	hsb_origin.ShowWindow(TRUE);
+
+	// 隐藏滚动条
+	vsb_result.ShowWindow(FALSE);
+	hsb_result.ShowWindow(FALSE);
+
+	// 原图像绘制原点
+	originX = originY = 0;
+
+	// 调整滚动条
+	SCROLLINFO vsi, hsi;
+	vsi.fMask = SIF_ALL;
+	vsi.nMin = 0;
+	vsi.nMax = max(height - originRect.Height(), 0);
+	vsi.nPage = SCROLLBAR_V_PAGE;
+	vsi.nPos = 0;
+
+	hsi.fMask = SIF_ALL;
+	hsi.nMin = 0;
+	hsi.nMax = max(width - originRect.Width(), 0);
+	hsi.nPage = SCROLLBAR_H_PAGE;
+	hsi.nPos = 0;
+	vsb_origin.SetScrollInfo(&vsi);
+	hsb_origin.SetScrollInfo(&hsi);
+
+	// 初始化控件
+	edit_content.EnableWindow();
+	btn_chooseAll.EnableWindow();
+	btn_insert.EnableWindow();
+	btn_getMsg.EnableWindow();
+	edit_messageShow.SetWindowText(_T(""));
+
+	// 禁用控件
+	saveImgEnable = false;
+	btn_clipboard.EnableWindow(false);
+
+	// 显示能存储的字节数(位数/8)
+	CString cstr;
+	cstr.Format(_T("%d"), originBmp.getImageSize() >> 3);
+	label_totByte.SetWindowText(cstr);
+
+	label_usedByte.SetWindowText(_T("0"));
+
+	edit_content.SetWindowText(_T(""));
+
+	Invalidate();
+	UpdateWindow();
+}
+
+// 初始化结果区域
+void CLSBInvisibleDlg::initResult(const MyBMPAlter &bmp)
+{
+	CDC *pDC = GetDC();
+	transBmp(resultCBitmap, bmp, *pDC);
+	ReleaseDC(pDC);
+
+	int width = bmp.getInfoHeader().biWidth;
+	int height = bmp.getInfoHeader().biHeight;
+
+	// 计算处理后图像的绘制区域
+	resultRect.right = min(maxResultRect.left + width, maxResultRect.right);
+	resultRect.bottom = min(maxResultRect.top + height, maxResultRect.bottom);
+
+	// 计算滚动条位置
+	vsbResultRect.OffsetRect(resultRect.right - vsbResultRect.left, 0);
+	vsbResultRect.top = resultRect.top;
+	vsbResultRect.bottom = resultRect.bottom;
+	hsbResultRect.OffsetRect(0, resultRect.bottom - hsbResultRect.top);
+	hsbResultRect.left = resultRect.left;
+	hsbResultRect.right = resultRect.right;
+
+	// 移动滚动条
+	vsb_result.MoveWindow(&vsbResultRect);
+	hsb_result.MoveWindow(&hsbResultRect);
+
+	// 显示滚动条
+	vsb_result.ShowWindow(TRUE);
+	hsb_result.ShowWindow(TRUE);
+
+	// 设置滚动条参数
+	SCROLLINFO vsi;
+	vsi.fMask = SIF_ALL;
+	vsi.nMin = 0;
+	vsi.nMax = max(height - resultRect.Height(), 0);
+	vsi.nPage = SCROLLBAR_V_PAGE;
+	vsi.nPos = 0;
+	vsb_result.SetScrollInfo(&vsi);
+
+	SCROLLINFO hsi;
+	hsi.fMask = SIF_ALL;
+	hsi.nMin = 0;
+	hsi.nMax = max(width - resultRect.Width(), 0);
+	hsi.nPage = SCROLLBAR_H_PAGE;
+	hsi.nPos = 0;
+	hsb_result.SetScrollInfo(&hsi);
+
+	resultX = resultY = 0;
+
+	saveImgEnable = true;
+
+	InvalidateRect(&resultRect);
+	UpdateWindow();
+}
+
 // 将MyBMPAlter转成CBITMAP
 void CLSBInvisibleDlg::transBmp(CBitmap &cbitmap, const MyBMPAlter &myBmp, CDC &pDC)
 {
@@ -438,93 +571,21 @@ void CLSBInvisibleDlg::OnClickReadImage()
 			int bitPerPixel = newBMP.getInfoHeader().biBitCount;
 			if (bitPerPixel != 8 && bitPerPixel != 24) {
 				MessageBox(_T("只支持256色和24位位图图象"), _T("错误"), MB_OK);
-				//return;
+				return;
 			}
+		
 			originBmp = newBMP;
 			resultBmp = MyBMPAlter();
-
-			// 将MyBMPAlter转换成内存中的CBitmap保存
-			CDC *pDC = GetDC();
-			transBmp(originCBitmap, originBmp, *pDC);
-			ReleaseDC(pDC);
-
-			// 获得图像的长宽
-			int width = originBmp.getInfoHeader().biWidth;
-			int height = originBmp.getInfoHeader().biHeight;
-
-			// 计算原图像显示的范围，maxOriginRect为能显示的最大范围
-			originRect.right = min(maxOriginRect.left + width, maxOriginRect.right);
-			originRect.bottom = min(maxOriginRect.top + height, maxOriginRect.bottom);
-
-			// 计算滚动条的位置
-			vsbOriginRect.OffsetRect(originRect.right - vsbOriginRect.left, 0);
-			vsbOriginRect.top = originRect.top;
-			vsbOriginRect.bottom = originRect.bottom;
-			hsbOriginRect.OffsetRect(0, originRect.bottom - hsbOriginRect.top);
-			hsbOriginRect.left = originRect.left;
-			hsbOriginRect.right = originRect.right;
-
-			// 移动滚动条
-			vsb_origin.MoveWindow(&vsbOriginRect);
-			hsb_origin.MoveWindow(&hsbOriginRect);
-
-			// 显示滚动条
-			vsb_origin.ShowWindow(TRUE);
-			hsb_origin.ShowWindow(TRUE);
-
-			// 隐藏滚动条
-			vsb_result.ShowWindow(FALSE);
-			hsb_result.ShowWindow(FALSE);
-
-			// 原图像绘制原点
-			originX = originY = 0;
-
-			// 调整滚动条
-			SCROLLINFO vsi, hsi;
-			vsi.fMask = SIF_ALL;
-			vsi.nMin = 0;
-			vsi.nMax = max(height - originRect.Height(), 0);
-			vsi.nPage = SCROLLBAR_V_PAGE;
-			vsi.nPos = 0;
-
-			hsi.fMask = SIF_ALL;
-			hsi.nMin = 0;
-			hsi.nMax = max(width - originRect.Width(), 0);
-			hsi.nPage = SCROLLBAR_H_PAGE;
-			hsi.nPos = 0;
-			vsb_origin.SetScrollInfo(&vsi);
-			hsb_origin.SetScrollInfo(&hsi);
-
-			// 初始化控件
-			edit_content.EnableWindow();
-			btn_chooseAll.EnableWindow();
-			btn_insert.EnableWindow();
-			btn_getMsg.EnableWindow();
-			edit_messageShow.SetWindowText(_T(""));
-
-			// 禁用控件
-			saveImgEnable = false;
-			btn_clipboard.EnableWindow(false);
 
 #ifdef CONSOLE_DEBUG
 			std::ostringstream os;
 			originBmp.outputInfo(os);
 			_cwprintf(_T("%s\n%s\n"), filePath, (const TCHAR *)CA2T(os.str().c_str()));
 #endif
-
-			// 显示能存储的字节数(位数/8)
-			CString cstr;
-			cstr.Format(_T("%d"), originBmp.getImageSize() >> 3);
-			label_totByte.SetWindowText(cstr);
-
-			label_usedByte.SetWindowText(_T("0"));
-			
-			edit_content.SetWindowText(_T(""));
-
-			Invalidate();
-			UpdateWindow();
 		}
 
+		// 初始化原始图片显示
+		initOrigin(originBmp);
 	}
 
 	SetMenu(&menu_dlg);	// 返回后菜单栏会失焦，通过重新设置菜单可以恢复。PS：不清楚有什么影响
@@ -626,6 +687,7 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 	}
 	_cprintf("\n");
 #endif
+
 	BYTE *newImgData;
 	if ((newImgData = new BYTE[imgSize]) == NULL) {
 		CString errorMsg;
@@ -644,55 +706,8 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 		newImgData, imgSize);
 	delete[] newImgData;		// 释放内存
 
-	CDC *pDC = GetDC();
-	transBmp(resultCBitmap, resultBmp, *pDC);
-	ReleaseDC(pDC);
-	int width = resultBmp.getInfoHeader().biWidth;
-	int height = resultBmp.getInfoHeader().biHeight;
-
-	// 计算处理后图像的绘制区域
-	resultRect.right = min(maxResultRect.left + width, maxResultRect.right);
-	resultRect.bottom = min(maxResultRect.top + height, maxResultRect.bottom);
-
-	// 计算滚动条位置
-	vsbResultRect.OffsetRect(resultRect.right - vsbResultRect.left, 0);
-	vsbResultRect.top = resultRect.top;
-	vsbResultRect.bottom = resultRect.bottom;
-	hsbResultRect.OffsetRect(0, resultRect.bottom - hsbResultRect.top);
-	hsbResultRect.left = resultRect.left;
-	hsbResultRect.right = resultRect.right;
-
-	// 移动滚动条
-	vsb_result.MoveWindow(&vsbResultRect);
-	hsb_result.MoveWindow(&hsbResultRect);
-
-	// 显示滚动条
-	vsb_result.ShowWindow(TRUE);
-	hsb_result.ShowWindow(TRUE);
-
-	// 设置滚动条参数
-	SCROLLINFO vsi;
-	vsi.fMask = SIF_ALL;
-	vsi.nMin = 0;
-	vsi.nMax = max(height - resultRect.Height(), 0);
-	vsi.nPage = SCROLLBAR_V_PAGE;
-	vsi.nPos = 0;
-	vsb_result.SetScrollInfo(&vsi);
-
-	SCROLLINFO hsi;
-	hsi.fMask = SIF_ALL;
-	hsi.nMin = 0;
-	hsi.nMax = max(width - resultRect.Width(), 0);
-	hsi.nPage = SCROLLBAR_H_PAGE;
-	hsi.nPos = 0;
-	hsb_result.SetScrollInfo(&hsi);
-
-	resultX = resultY = 0;
-
-	saveImgEnable = true;
-
-	InvalidateRect(&resultRect);
-	UpdateWindow();
+	// 初始化结果图片显示
+	initResult(resultBmp);
 }
 
 
