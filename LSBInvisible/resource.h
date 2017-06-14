@@ -23,10 +23,11 @@
 #define IDC_EDIT_MESSAGE                1012
 #define IDC_BUTTON2                     1013
 #define IDC_BUTTON_CLIPBOARD            1013
-#define IDCANCEL                        1015
 #define IDC_EDIT_GAUSS_AVG              1016
 #define IDC_EDIT_GAUSS_                 1017
 #define IDC_EDIT_GAUSS_VAR              1017
+#define IDC_EDIT_INSERT_KEY             1018
+#define IDC_EDIT_GET_KEY                1019
 #define ID_32771                        32771
 #define ID_32772                        32772
 #define ID_32773                        32773
@@ -42,7 +43,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        135
 #define _APS_NEXT_COMMAND_VALUE         32779
-#define _APS_NEXT_CONTROL_VALUE         1018
+#define _APS_NEXT_CONTROL_VALUE         1020
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

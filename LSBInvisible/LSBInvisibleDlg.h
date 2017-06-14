@@ -34,13 +34,11 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
-public:
-	CMenu menu_dlg;
-	afx_msg void OnClickReadImage();
 
 /* 其它变量 */
 private:
 	const int CONTENT_LIMIT = 0;		// 输入框的最大长度，0表示无限制
+	const int KEY_LIMIT = 32;			// 密钥长度限制
 	const int SCROLLBAR_V_LINE = 20;	// 垂直滚动条行的长度
 	const int SCROLLBAR_H_LINE = 20;	// 水平滚动条行的长度
 	const int SCROLLBAR_V_PAGE = 50;	// 垂直滚动条页的长度
@@ -57,7 +55,6 @@ private:
 	CString transLFToCRLF(const CString &cstr);
 
 	COLORREF usedByteClr;
-	bool saveImgEnable;
 
 	MyBMPAlter originBmp;
 	CBitmap originCBitmap;
@@ -78,6 +75,8 @@ private:
 	int resultY;
 
 public:
+	CMenu menu_dlg;
+	afx_msg void OnClickReadImage();
 	CStatic label_totByte;
 	CStatic label_usedByte;
 	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
@@ -103,4 +102,7 @@ public:
 	afx_msg void OnBnClickedButtonClipboard();
 	afx_msg void OnMenuExit();
 	afx_msg void OnMenuGaussNoise();
+	CEdit edit_insert_key;
+	CEdit edit_get_key;
+	afx_msg void OnUpdateMenuGaussNoise(CCmdUI *pCmdUI);
 };

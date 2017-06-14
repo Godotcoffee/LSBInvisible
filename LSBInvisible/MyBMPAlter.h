@@ -16,8 +16,8 @@ protected:
 	int imageSize;
 public:
 	MyBMPAlter();
-	MyBMPAlter(const char *fileName);
-	MyBMPAlter(const string fileName);
+	MyBMPAlter(const char *filePath);
+	MyBMPAlter(const string filePath);
 	MyBMPAlter(const BITMAPFILEHEADER &fileHeader, const BITMAPINFOHEADER &infoHeader, const RGBQUAD *quad, int quadSize, const BYTE *imageData, int imageSize); // 自定义Bitmap数据构造函数
 	MyBMPAlter(const MyBMPAlter &bmp) noexcept;
 	MyBMPAlter(MyBMPAlter &&bmp) noexcept;		// 移动构造函数

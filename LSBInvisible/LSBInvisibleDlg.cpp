@@ -80,6 +80,8 @@ void CLSBInvisibleDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_BUTTON_GET, btn_getMsg);
 	DDX_Control(pDX, IDC_EDIT_MESSAGE, edit_messageShow);
 	DDX_Control(pDX, IDC_BUTTON_CLIPBOARD, btn_clipboard);
+	DDX_Control(pDX, IDC_EDIT_INSERT_KEY, edit_insert_key);
+	DDX_Control(pDX, IDC_EDIT_GET_KEY, edit_get_key);
 }
 
 BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
@@ -100,6 +102,7 @@ BEGIN_MESSAGE_MAP(CLSBInvisibleDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_CLIPBOARD, &CLSBInvisibleDlg::OnBnClickedButtonClipboard)
 	ON_COMMAND(ID_MENU_EXIT, &CLSBInvisibleDlg::OnMenuExit)
 	ON_COMMAND(ID_MENU_GAUSS_NOISE, &CLSBInvisibleDlg::OnMenuGaussNoise)
+	ON_UPDATE_COMMAND_UI(ID_MENU_GAUSS_NOISE, &CLSBInvisibleDlg::OnUpdateMenuGaussNoise)
 END_MESSAGE_MAP()
 
 // 下面函数代码是拷贝的,为了让对话框模式能响应菜单弹出事件
@@ -188,13 +191,14 @@ void CLSBInvisibleDlg::OnInitMenuPopup(CMenu* pPopupMenu, UINT nIndex, BOOL bSys
 void CLSBInvisibleDlg::init()
 {
 	srand(time(NULL));
-	saveImgEnable = false;
 	usedByteClr = RGB(0, 0, 0);
 
 	menu_dlg.LoadMenuW(IDR_MENU1);
 	SetMenu(&menu_dlg);
 
-	edit_content.LimitText(CONTENT_LIMIT);
+	edit_content.SetLimitText(CONTENT_LIMIT);
+	edit_insert_key.SetLimitText(KEY_LIMIT);
+	edit_get_key.SetLimitText(KEY_LIMIT);
 
 	vsb_origin.GetWindowRect(&vsbOriginRect);
 	hsb_origin.GetWindowRect(&hsbOriginRect);
@@ -211,12 +215,19 @@ void CLSBInvisibleDlg::init()
 	resultRect = maxResultRect = CRect(hsbResultRect.left, vsbResultRect.top, vsbResultRect.left, hsbResultRect.top);
 	resultX = resultY = 0;
 
-	const int sample = 1000;
-	std::ofstream out("./test.txt");
+	/*const int sample = 100;
+	int arr[sample];
 	for (int i = 0; i < sample; ++i) {
-		out << MessageHidden::gaussDistribution() << std::endl;
+		arr[i] = i;
 	}
-	out.close();
+
+	MessageHidden::shuffleArrayByKey(arr, sample, 2);
+
+	for (int i = 0; i < sample; ++i) {
+		_cprintf("%d\n", arr[i]);
+	}
+	const char *str = "abcdeaf";
+	_cprintf("%u\n", MessageHidden::elfHash(str));*/
 }
 
 void CLSBInvisibleDlg::initOrigin(const MyBMPAlter &bmp)
@@ -275,13 +286,17 @@ void CLSBInvisibleDlg::initOrigin(const MyBMPAlter &bmp)
 
 	// 初始化控件
 	edit_content.EnableWindow();
+	edit_insert_key.EnableWindow();
+	edit_get_key.EnableWindow();
 	btn_chooseAll.EnableWindow();
 	btn_insert.EnableWindow();
 	btn_getMsg.EnableWindow();
 	edit_messageShow.SetWindowText(_T(""));
+	edit_insert_key.SetWindowText(_T(""));
+	edit_get_key.SetWindowText(_T(""));
+	edit_content.SetWindowText(_T(""));
 
 	// 禁用控件
-	saveImgEnable = false;
 	btn_clipboard.EnableWindow(false);
 
 	// 显示能存储的字节数(位数/8)
@@ -290,8 +305,6 @@ void CLSBInvisibleDlg::initOrigin(const MyBMPAlter &bmp)
 	label_totByte.SetWindowText(cstr);
 
 	label_usedByte.SetWindowText(_T("0"));
-
-	edit_content.SetWindowText(_T(""));
 
 	Invalidate();
 	UpdateWindow();
@@ -345,8 +358,6 @@ void CLSBInvisibleDlg::initResult(const MyBMPAlter &bmp)
 	hsb_result.SetScrollInfo(&hsi);
 
 	resultX = resultY = 0;
-
-	saveImgEnable = true;
 
 	InvalidateRect(&resultRect);
 	UpdateWindow();
@@ -666,8 +677,15 @@ void CLSBInvisibleDlg::OnEnChangeEditContent()
 // 保存图片菜单项是否可用
 void CLSBInvisibleDlg::OnUpdateSaveImage(CCmdUI *pCmdUI)
 {
-	pCmdUI->Enable(saveImgEnable);
+	pCmdUI->Enable(resultBmp.checkIsRead());
 }
+
+// 高斯噪声菜单项是否可用
+void CLSBInvisibleDlg::OnUpdateMenuGaussNoise(CCmdUI *pCmdUI)
+{
+	pCmdUI->Enable(originBmp.checkIsRead());
+}
+
 
 
 void CLSBInvisibleDlg::OnBnClickedButtonChooseAll()
@@ -708,8 +726,11 @@ void CLSBInvisibleDlg::OnBnClickedButtonInsert()
 	}
 	memcpy(newImgData, originBmp.getImageData(), imgSize * sizeof(BYTE));
 
+	CString keyCstr;
+	edit_insert_key.GetWindowText(keyCstr);
+	CStringA keyCstra = CT2A(keyCstr);
 	// 嵌入
-	MessageHidden::hiddenMessageInLSB(newImgData, imgSize, cstra, cstra.GetLength());
+	MessageHidden::hiddenMessageInLSB(newImgData, imgSize, cstra, cstra.GetLength(), keyCstr.GetLength() > 0, MessageHidden::elfHash(keyCstra));
 
 	resultBmp = MyBMPAlter(
 		originBmp.getFileHeader(), originBmp.getInfoHeader(), 
@@ -737,7 +758,12 @@ void CLSBInvisibleDlg::OnBnClickedButtonGet()
 		MessageBox(errorMsg, _T("错误"), MB_OK);
 		return;
 	}
-	MessageHidden::getMessageFromLSB(msgData, msgSize, originBmp.getImageData(), imgSize);
+
+	CString keyCstr;
+	edit_get_key.GetWindowText(keyCstr);
+	CStringA keyCstra = CT2A(keyCstr);
+
+	MessageHidden::getMessageFromLSB(msgData, msgSize, originBmp.getImageData(), imgSize, keyCstra.GetLength() > 0, MessageHidden::elfHash(keyCstra));
 	CString msg = transLFToCRLF(CString(msgData));
 	delete[] msgData;	// 释放内存
 
