@@ -21,15 +21,15 @@ public:
 };
 
 template<typename T>
-void inline MessageHidden::MessageHidden::shuffleArrayByKey(T* arr, int size, unsigned int key)
+void inline MessageHidden::MessageHidden::shuffleArrayByKey(T* arr, int size, UINT32 key)
 {
 	// PRN参数
-	static const int A = 1664525, C = 1013904223;
-	unsigned int x = key;
+	static const UINT32 A = 1664525, C = 1013904223;
+	UINT32 x = key;
 
 	for (int i = 0; i < size - 1; ++i) {
-		INT64 x64 = x;
-		x = x64 * A + C;
+		UINT64 x64 = x;
+		x = x64 * A + C;			// 自动截断取模
 		int pos = i + x % (size - i);
 		T tmp = arr[i];
 		arr[i] = arr[pos];
